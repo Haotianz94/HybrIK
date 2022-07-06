@@ -5,7 +5,6 @@ Renders mesh using OpenDr for visualization.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from matplotlib.cbook import flatten
 
 import numpy as np
 import cv2
@@ -61,8 +60,8 @@ class SMPLRenderer(object):
 
         if princpt is None:
             princpt = [w / 2, h / 2]
-        else:
-            princpt = self.princpt
+        # else:
+        #     princpt = self.princpt
 
         use_cam = ProjectPoints(
             f=self.focal,

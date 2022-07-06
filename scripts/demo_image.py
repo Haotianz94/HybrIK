@@ -42,6 +42,9 @@ parser.add_argument('--out-dir',
                     help='output folder',
                     default='',
                     type=str)
+parser.add_argument('--sideview',
+                    action='store_true',
+                    dest='sideview')
 opt = parser.parse_args()
 
 
@@ -84,7 +87,7 @@ files = os.listdir(opt.img_dir)
 if not os.path.exists(opt.out_dir):
     os.makedirs(opt.out_dir)
 
-for file in tqdm(files):
+for file in tqdm(sorted(files)):
     if not os.path.isdir(file) and file[-4:] in ['.jpg', '.png']:
         # is an image
         if file[:4] == 'res_':
@@ -123,7 +126,7 @@ for file in tqdm(files):
 
         image_vis = vis_smpl_3d(
             pose_output, image, cam_root=transl,
-            f=focal, c=princpt, renderer=renderer)
+            f=focal, c=princpt, renderer=renderer, sideview=opt.sideview)
 
         image_vis = cv2.cvtColor(image_vis, cv2.COLOR_RGB2BGR)
 

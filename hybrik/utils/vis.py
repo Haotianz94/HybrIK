@@ -84,7 +84,7 @@ def vis_2d(image, bbox, pts):
 
 
 def vis_smpl_3d(pose_output, img, cam_root, f, c, renderer, color_id=0, cam_rt=np.zeros(3),
-                cam_t=np.zeros(3), J_regressor_h36m=None):
+                cam_t=np.zeros(3), J_regressor_h36m=None, sideview=False):
     '''
     input theta_mats: np.ndarray (96, )
     input betas: np.ndarray (10, )
@@ -102,14 +102,58 @@ def vis_smpl_3d(pose_output, img, cam_root, f, c, renderer, color_id=0, cam_rt=n
     # center = pose_output.joints[0][0].cpu().data.numpy()
     # vert_shifted = vertices - center + cam_root
     vert_shifted = vertices + cam_root
-    vert_shifted = vert_shifted
 
     # Render results
     rend_img_overlay = renderer(
         vert_shifted, princpt=c, img=img, do_alpha=True, color_id=color_id, cam_rt=cam_rt, cam_t=cam_t)
 
-    img = pil_img.fromarray(rend_img_overlay[:, :, :3].astype(np.uint8))
-    # if len(filename) > 0:
-    #     img.save(filename)
+    img_overlay = rend_img_overlay[:, :, :3].astype(np.uint8)
+    if not sideview:
+        return img_overlay
 
-    return np.asarray(img)
+    # Render four views
+    h, w = img.shape[:2]
+    rend_img = np.ones((h, h, 3), np.uint8) * 255
+    w = h
+    # Make side views centered
+    cam_root = np.array([0, 0, 6])
+    vert_shifted = vertices + cam_root
+
+    ## Render left view
+    cam_t = np.array([cam_root[2], 0, cam_root[2]])
+    cam_rt = np.array([0, -np.pi/2, 0])
+    rend_img = renderer(
+        vert_shifted, princpt=[w//4*1, h//4*1], img=rend_img, do_alpha=False, color_id=color_id, cam_rt=cam_rt, cam_t=cam_t)
+
+    ## Render right view
+    # cam_t = np.array([-cam_root[2], 0, cam_root[2]])
+    # cam_rt = np.array([0, np.pi/2, 0])
+    # rend_img = renderer(
+    #     vert_shifted, princpt=[w//4*3, h//4*1], img=rend_img, do_alpha=False, color_id=color_id, cam_rt=cam_rt, cam_t=cam_t)
+
+    ## Render top view
+    cam_t = np.array([0, cam_root[2], cam_root[2]])
+    cam_rt = np.array([np.pi/2, 0, 0])
+    # cam_t = np.array([0, 0, 0])
+    # cam_rt = np.array([0, 0, 0])
+    rend_img = renderer(
+        vert_shifted, princpt=[w//4*3, h//4*1], img=rend_img, do_alpha=False, color_id=color_id, cam_rt=cam_rt, cam_t=cam_t)
+
+    ## Render back view (original)
+    cam_t = np.array([0, 0, 0])
+    cam_rt = np.array([0, 0, 0])
+    rend_img = renderer(
+        vert_shifted, princpt=[w//4*1, h//4*3], img=rend_img, do_alpha=False, color_id=color_id, cam_rt=cam_rt, cam_t=cam_t)
+
+    ## Render front view
+    cam_t = np.array([0, 0, cam_root[2]*2])
+    cam_rt = np.array([0, np.pi, 0])
+    rend_img = renderer(
+    vert_shifted, princpt=[w//4*3, h//4*3], img=rend_img, do_alpha=False, color_id=color_id, cam_rt=cam_rt, cam_t=cam_t)
+
+    img_sideview = rend_img[:, :, :3].astype(np.uint8)
+
+    # Concat overlay and sideview
+    img_concat = np.concatenate((img_overlay, img_sideview), axis=1)
+
+    return img_concat

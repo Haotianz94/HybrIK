@@ -57,9 +57,12 @@ parser.add_argument('--out-dir',
                     help='output folder',
                     default='',
                     type=str)
+parser.add_argument('--sideview',
+                    action='store_true',
+                    dest='sideview')
 
 opt = parser.parse_args()
-
+device = torch.device('cuda:{}'.format(opt.gpu))
 
 cfg_file = 'configs/256x192_adam_lr1e-3-res34_smpl_3d_cam_2x_mix.yaml'
 cfg = update_config(cfg_file)
@@ -90,8 +93,8 @@ hybrik_model = builder.build_sppe(cfg.MODEL)
 print(f'Loading model from {CKPT}...')
 hybrik_model.load_state_dict(torch.load(CKPT, map_location='cpu'), strict=False)
 
-det_model.cuda(opt.gpu)
-hybrik_model.cuda(opt.gpu)
+det_model.to(device)
+hybrik_model.to(device)
 det_model.eval()
 hybrik_model.eval()
 
@@ -108,8 +111,10 @@ if not os.path.exists(os.path.join(opt.out_dir, 'res_2d_images')):
     os.makedirs(os.path.join(opt.out_dir, 'res_2d_images'))
 
 info = get_video_info(opt.video_name)
+# bitrate = info['bit_rate']
 bitrate = info['bit_rate']
-os.system(f'ffmpeg -i {opt.video_name} {opt.out_dir}/raw_images/{video_basename}-%06d.jpg')
+if not os.path.exists('{opt.out_dir}/raw_images'):
+    os.system(f'ffmpeg -i {opt.video_name} {opt.out_dir}/raw_images/{video_basename}-%06d.jpg')
 
 
 files = os.listdir(f'{opt.out_dir}/raw_images')
@@ -133,7 +138,7 @@ for img_path in tqdm(img_path_list):
 
     # Run Detection
     input_image = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
-    det_input = det_transform(input_image).to(opt.gpu)
+    det_input = det_transform(input_image).to(device)
     det_output = det_model([det_input])[0]
 
     if prev_box is None:
@@ -147,7 +152,7 @@ for img_path in tqdm(img_path_list):
 
     # Run HybrIK
     pose_input, bbox = transformation.test_transform(img_path, tight_bbox)
-    pose_input = pose_input.to(opt.gpu)[None, :, :, :]
+    pose_input = pose_input.to(device)[None, :, :, :]
     pose_output = hybrik_model(pose_input)
     uv_29 = pose_output.pred_uvd_jts.reshape(29, 3)[:, :2]
 
@@ -167,7 +172,7 @@ for img_path in tqdm(img_path_list):
 
     image_vis = vis_smpl_3d(
         pose_output, image, cam_root=transl,
-        f=focal, c=princpt, renderer=renderer)
+        f=focal, c=princpt, renderer=renderer, sideview=opt.sideview)
 
     image_vis = cv2.cvtColor(image_vis, cv2.COLOR_RGB2BGR)
     # cv2.imshow('image_vis', image_vis)
@@ -187,5 +192,9 @@ for img_path in tqdm(img_path_list):
     res_path = os.path.join(opt.out_dir, 'res_2d_images', f'image-{idx:06d}.jpg')
     cv2.imwrite(res_path, bbox_img)
 
-os.system(f"ffmpeg -r 25 -i ./{opt.out_dir}/res_images/image-%06d.jpg -vcodec mpeg4 -b:v {bitrate} ./{opt.out_dir}/res_{video_basename}.mp4")
-os.system(f"ffmpeg -r 25 -i ./{opt.out_dir}/res_2d_images/image-%06d.jpg -vcodec mpeg4 -b:v {bitrate} ./{opt.out_dir}/res_2d_{video_basename}.mp4")
+    # Print and debug
+    print('Joints 29', pose_output.pred_xyz_jts_29)
+    print('Joints 17', pose_output.pred_xyz_jts_17)
+
+os.system(f"ffmpeg -y -r 25 -i ./{opt.out_dir}/res_images/image-%06d.jpg -c:v libx264 ./{opt.out_dir}/res_{video_basename}.mp4")
+os.system(f"ffmpeg -y -r 25 -i ./{opt.out_dir}/res_2d_images/image-%06d.jpg -c:v libx264 ./{opt.out_dir}/res_2d_{video_basename}.mp4")

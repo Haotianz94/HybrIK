@@ -1,3 +1,13 @@
+# Haotian
+1. install mesa
+```
+sudo apt-get install libosmesa6-dev
+```
+2. install latest pytorch/torchvision 
+```
+python -m pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html
+```
+
 # HybrIK
 
 <a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white"></a>

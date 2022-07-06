@@ -376,10 +376,10 @@ class Simple3DPoseBaseSMPLCam(nn.Module):
         transl[:, 2] += camDepth[:, 0, 0]
 
         output = ModelOutput(
-            pred_phi=pred_phi,
-            pred_delta_shape=delta_shape,
-            pred_shape=pred_shape,
-            pred_theta_mats=pred_theta_mats,
+            pred_phi=pred_phi, # 23
+            pred_delta_shape=delta_shape, # 10
+            pred_shape=pred_shape, # 10
+            pred_theta_mats=pred_theta_mats, # 96
             pred_uvd_jts=pred_uvd_jts_29.reshape(batch_size, -1),
             pred_xyz_jts_29=pred_xyz_jts_29_flat,
             pred_xyz_jts_24=pred_xyz_jts_24,
@@ -395,6 +395,7 @@ class Simple3DPoseBaseSMPLCam(nn.Module):
             # uvd_heatmap=heatmaps,
             # img_feat=x0
         )
+
         return output
 
     def forward_gt_theta(self, gt_theta, gt_beta):
