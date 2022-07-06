@@ -1,11 +1,16 @@
 # Haotian
-1. install mesa
+1. Install mesa (if not installed before)
 ```
 sudo apt-get install libosmesa6-dev
 ```
-2. install latest pytorch/torchvision 
+2. Create python virtual env
+3. Install pytorch/torchvision 
 ```
 python -m pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html
+```
+4. Run setup.py
+```
+python setup.py develop --user
 ```
 
 # HybrIK
